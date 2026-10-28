@@ -3,3 +3,10 @@
 *.log
 .idea/
 *.iml
+.env
+.env.*
+!.env.example
+node_modules/
+.expo/
+mobile/android/
+mobile/ios/

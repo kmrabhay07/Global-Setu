@@ -1,0 +1,6 @@
+.git
+.env
+node_modules
+mobile
+target
+data

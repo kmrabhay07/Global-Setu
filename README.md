@@ -1,21 +1,38 @@
-# Global Setu — pilot foundation
+# Global Setu
 
-A Java 21 / Spring Boot responsive web prototype based on the supplied BRD. The application stores data in a local H2 file and includes a customer request form, an operations queue, quotation entry, comparison and recorded accept/reject decisions. It is a prototype, not a production marketplace.
+Global Setu is an office-assisted marketplace pilot for Nashik. This repository contains a Java 21 / Spring Boot API, a responsive website and operations workspace, and an Expo React Native client for Android and iOS. It is an in-development implementation of the accompanying business requirements, not a production-ready release.
 
-## Run
+## Included workflows
 
-Install JDK 21 and Maven 3.9+, then run `mvn spring-boot:run` from this directory. Open http://localhost:8080. Run `mvn test` for tests. Data is stored under `data/`; removing it deletes all local records. Requires internet access to download Maven dependencies on first run.
+- Password-based accounts and an optional SMS-code flow, bearer sessions and role-based access for customers, professionals, vendors, delivery partners, operations and super administrators.
+- Categories, addresses, partner onboarding and verification, material listings, service requests, itemized quotations and customer decisions.
+- Bookings gated by an accepted quotation and a verified provider; work progress, deliveries and proof uploads; offline payment and refund records; complaints, moderated reviews, in-app notifications, audit history and CSV/XLSX exports.
+- Responsive web screens, role-based navigation and React Native source. See [mobile/README.md](mobile/README.md) for its current feature gaps.
 
-## Intended demo flow
+## Start locally
 
-1. Submit a service request with contact consent.
-2. Open Operations, select the request, move it under review and add one or more quotations.
-3. Open My requests and select a request to compare quotes and accept or reject one. Acceptance records a timestamp and changes the request to Approved. It does not create or confirm a booking.
+Install Java 21 and Maven 3.9+. Define bootstrap credentials in your shell and start the API:
 
-## Critical limitations
+```bash
+export SETU_ADMIN_MOBILE=9999999999
+export SETU_ADMIN_PASSWORD='use-a-long-unique-password'
+mvn spring-boot:run
+```
 
-No login, authorization or user isolation is implemented: anyone with access can see and modify all requests and quotations. Run only on a trusted local machine with fictitious data. Do not expose to the internet or enter real personal information. Provider verification, consent versioning, immutable quotation versions, booking confirmation and operational checks, concurrency/idempotency guarantees, audit log, uploads, payments, delivery, complaints, notifications, admin configuration, reports, mobile applications and integrations are not implemented. The categories are seed values in code rather than configurable records. Quotation scope is a single text field; line items, tax breakdown and verification must be added. Security, privacy, backups, migration management, testing and legal/commercial policies are required before production.
+Open http://localhost:8080. The administrator is created only if the supplied mobile is not already present; the password must be at least 16 characters. Customers can register from the website. Local data is stored under `data/` in an H2 file database. Treat the example number as a placeholder and avoid using real customer data in development. Delete local data only when it is safe to lose it.
 
-## Suggested next milestones
+To run tests: `mvn verify`. To check the mobile client: `cd mobile && npm ci && npm run check`. For PostgreSQL, copy `.env.example` to `.env`, set the values, then run `docker compose up --build`; the compose configuration binds the app to localhost. Do not commit `.env`, credentials or database files. The `prod` profile uses Flyway migrations and validates the schema on startup.
 
-Agree pilot categories, language, OTP provider, provider verification criteria and payment/cancellation rules. Then add authenticated role-based access and tenant ownership; configurable catalogue and verified providers; normalized quotation line items and immutable decisions; transactional booking with approval/verification checks; file storage; delivery, payment recording, support, audit and reports. Add mobile clients and integration testing after API contracts stabilize. Integrations and charges need explicit approval.
+## SMS code sign-in
+
+The optional SMS adapter requires `SETU_OTP_WEBHOOK_URL` (HTTPS) and `SETU_OTP_WEBHOOK_TOKEN`. The owner must configure an SMS integration that accepts an authenticated JSON POST with `phone`, `message` and `purpose`; an HTTP 2xx indicates only that the provider accepted the request. No SMS provider is configured by default. For local development only, `SETU_OTP_DEV=true` returns the code in the response. Development codes are forcibly disabled with the `prod` profile. Password sign-in remains available.
+
+## Important limits
+
+- This implementation has not completed all BRD acceptance criteria. Provider-specific SMS, payment gateway/webhooks, maps, push notifications, online payments and actual provider payouts are not configured. Payment/refund workflows record manually verified offline events; they do not move money.
+- Mobile app source is included; signed Android/iOS builds, device testing and app-store submission remain outstanding. The mobile client does not yet cover every web administration screen.
+- Security needs an independent review, durable multi-instance rate limiting, secure public hosting/TLS, monitored backups and a business-approved privacy/retention policy before real users or personal data are onboarded. Uploads are stored locally; object storage, malware scanning, limits and recovery procedures need production design. Do not expose the local development configuration publicly.
+- Provider criteria, pilot locations, language, refund/cancellation rules, taxes, revenue model and final commercial terms require owner decisions. No wallet, escrow, split settlement or automatic payouts are implemented.
+- Initial data in a pre-existing prototype H2 database is not automatically migrated to the new schema; retain a backup and plan migration before upgrading any environment with data.
+
+See [docs/BRD-COVERAGE.md](docs/BRD-COVERAGE.md) for the requirement-by-requirement status and remaining work.
