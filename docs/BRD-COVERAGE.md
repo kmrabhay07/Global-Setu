@@ -44,7 +44,7 @@ Baseline: Global_Setu_BRD_Developer_V1.docx, version 1.0. This is an implementat
 
 ## Architecture proposal
 
-Java 21 Spring Boot modular monolith; PostgreSQL with versioned migrations; authenticated session cookies for web and securely stored tokens for native clients; private object storage for uploads; outbox-based notifications; explicit request/booking/delivery state machines. Existing H2 is a local prototype store only. Choose React/TypeScript for the eventual web client and React Native for shared Android/iOS screens. These are proposals, not implemented capabilities.
+Java 21 Spring Boot modular backend, a responsive HTML/CSS/JavaScript web client, and an Expo React Native client. The API uses bearer tokens, stores local uploads, and includes workflow transitions and a PostgreSQL migration. H2 is the local development store. External object storage, durable notification delivery and production migration validation remain to be completed.
 
 ## Owner decisions and external dependencies
 

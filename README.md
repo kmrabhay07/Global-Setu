@@ -36,3 +36,5 @@ The optional SMS adapter requires `SETU_OTP_WEBHOOK_URL` (HTTPS) and `SETU_OTP_W
 - Initial data in a pre-existing prototype H2 database is not automatically migrated to the new schema; retain a backup and plan migration before upgrading any environment with data.
 
 See [docs/BRD-COVERAGE.md](docs/BRD-COVERAGE.md) for the requirement-by-requirement status and remaining work.
+
+For decisions, accounts and release tasks that need the project owner, see [docs/OWNER-TO-DO.md](docs/OWNER-TO-DO.md).

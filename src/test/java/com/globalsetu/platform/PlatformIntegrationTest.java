@@ -48,9 +48,17 @@ class PlatformIntegrationTest {
   var profile=create(provider,"profiles",Map.of("name","Verified artisan","type","PROFESSIONAL","city","Nashik","skills","POP","experience","3 years","availability","Weekdays","phone","8888888888"));
   mvc.perform(multipart("/api/uploads").file(new MockMultipartFile("file","review.pdf","application/pdf","%PDF-1.4 test verification evidence".getBytes())).param("recordId",profile.get("id").toString()).header("Authorization","Bearer "+provider)).andExpect(status().isOk());
   action(admin,profile.get("id"),"verify",Map.of("note","Identity and references checked"));
+  var verificationFiles=json.readTree(mvc.perform(get("/api/uploads").param("recordId",profile.get("id").toString()).header("Authorization","Bearer "+provider)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+  mvc.perform(delete("/api/uploads/"+verificationFiles.get(0).get("id").asText()).header("Authorization","Bearer "+provider)).andExpect(status().isConflict());
+
   var catalogue=json.readTree(mvc.perform(get("/api/catalog/categories")).andReturn().getResponse().getContentAsString());
   var d=new LinkedHashMap<String,Object>();d.putAll(Map.of("title","Interior work","description","Ceiling work","address","Test address","city","Nashik","categoryId",catalogue.get(0).get("id").asText(),"quantity",2,"unit","sq ft","budget",1100,"preferredDate","2099-01-01","priority","Quality"));d.put("consent",true);var request=create(customer,"requests",d);
+  mvc.perform(multipart("/api/uploads").file(new MockMultipartFile("file","customer.pdf","application/pdf","%PDF-customer image".getBytes())).param("recordId",request.get("id").toString()).header("Authorization","Bearer "+customer)).andExpect(status().isOk());
+  mvc.perform(multipart("/api/uploads").file(new MockMultipartFile("file","office.pdf","application/pdf","%PDF-office only".getBytes())).param("recordId",request.get("id").toString()).header("Authorization","Bearer "+admin)).andExpect(status().isOk());
   action(admin,request.get("id"),"assign",Map.of("providerId",providerId));
+  var assignedFiles=mvc.perform(get("/api/uploads").param("recordId",request.get("id").toString()).header("Authorization","Bearer "+provider)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+  assertTrue(assignedFiles.contains("customer.pdf"));assertFalse(assignedFiles.contains("office.pdf"));
+
   var q=new LinkedHashMap<String,Object>();q.putAll(Map.of("requestId",request.get("id"),"scope","Two units","timeline","1 day","validUntil","2099-01-01","termsVersion","terms-v1","lineItems",List.of(Map.of("description","Labour","type","LABOUR","quantity",2,"unit","units","unitPrice",500)),"tax",100,"fees",0,"deliveryCharge",0));
   var quote=create(provider,"quotes",q);assertEquals(1100.0,((Number)((Map<?,?>)quote.get("data")).get("total")).doubleValue());
   action(customer,quote.get("id"),"accept",Map.of());
