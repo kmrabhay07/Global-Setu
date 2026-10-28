@@ -1,40 +1,113 @@
 # Global Setu
 
-Global Setu is an office-assisted marketplace pilot for Nashik. This repository contains a Java 21 / Spring Boot API, a responsive website and operations workspace, and an Expo React Native client for Android and iOS. It is an in-development implementation of the accompanying business requirements, not a production-ready release.
+Global Setu is an office-assisted marketplace for connecting customers, service professionals, vendors and delivery partners. The current pilot focuses on construction and interior services in Nashik, with categories designed to expand to other services and locations.
 
-## Included workflows
+This repository contains an **in-development application**, not a production-ready release. It includes a Java 21 / Spring Boot backend, a responsive web interface and an Expo React Native client for Android and iOS. The BRD's acceptance criteria and production safeguards are still being completed.
 
-- Password-based accounts and an optional SMS-code flow, bearer sessions and role-based access for customers, professionals, vendors, delivery partners, operations and super administrators.
-- Categories, addresses, partner onboarding and verification, material listings, service requests, itemized quotations and customer decisions.
-- Bookings gated by an accepted quotation and a verified provider; work progress, deliveries and proof uploads; offline payment and refund records; complaints, moderated reviews, in-app notifications, audit history and CSV/XLSX exports.
-- Responsive web screens, role-based navigation and React Native source. See [mobile/README.md](mobile/README.md) for its current feature gaps.
+## How the marketplace works
 
-## Start locally
+1. A customer registers, selects a service and submits a request with location, scope, budget, timing and consent. Attachments can be added to the request.
+2. Operations reviews the request, asks for clarification if needed and assigns a verified professional or vendor. Partners submit itemized quotations; operations can also record quotations.
+3. The customer reviews the quotes and accepts, rejects or asks for clarification. An accepted, valid quote and a verified provider are required before operations can confirm a booking.
+4. Operations and the provider track the schedule and work. A delivery partner can be assigned separately, with proof of delivery recorded when applicable.
+5. Operations records verified offline payments and refunds. The customer can raise a complaint, confirm completed work and submit a review for moderation.
 
-Install Java 21 and Maven 3.9+. Define bootstrap credentials in your shell and start the API:
+The office controls matching and booking confirmation. The current implementation does not automatically dispatch providers or transfer money.
+
+## Roles
+
+| Role | Main responsibilities |
+| --- | --- |
+| Customer | Manage addresses, requests, decisions, bookings, complaints and reviews. |
+| Professional | Submit a profile for verification, respond to assigned enquiries, quote and update work. |
+| Vendor | Submit a shop profile, manage product information and respond to enquiries. |
+| Delivery partner | Submit a profile and update assigned delivery stages and proof. |
+| Operations | Verify partners, manage requests, quotations, bookings, delivery and support, and record offline financial events. |
+| Super administrator | Manage account access and system settings, in addition to operations duties. |
+
+## Technology and repository layout
+
+| Area | Technology / location |
+| --- | --- |
+| API and business rules | Java 21, Spring Boot, Spring Security, Spring Data JPA: `src/main/java/com/globalsetu/platform/` |
+| Web client | Responsive HTML, CSS and JavaScript served by Spring Boot: `src/main/resources/static/` |
+| Mobile client | Expo and React Native: `mobile/` |
+| Data | H2 for local development; PostgreSQL profile and Flyway migrations: `src/main/resources/` |
+| Tests and CI | `src/test/` and `.github/workflows/ci.yml` |
+| Requirement and owner checklists | `docs/BRD-COVERAGE.md` and `docs/OWNER-TO-DO.md` |
+
+## Run locally
+
+Prerequisites: Java 21 and Maven 3.9 or later. For mobile development, also install Node.js 22 or later and the required Android or iOS tools.
+
+1. Clone the repository and enter its directory.
+2. Set the initial administrator's mobile number and a unique password of at least 16 characters. These example values are placeholders:
+
+   ```bash
+   export SETU_ADMIN_MOBILE=9999999999
+   export SETU_ADMIN_PASSWORD='replace-with-a-unique-long-password'
+   ```
+
+3. Start the server:
+
+   ```bash
+   mvn spring-boot:run
+   ```
+
+4. Open `http://localhost:8080`. Sign in as the administrator or register a customer account.
+
+The administrator is created only when the configured mobile number does not already exist. Local records use an H2 file database under `data/`; uploads use `data/uploads/`. Keep these files private and back them up before changing or removing them. An older prototype H2 database is not automatically migrated to the current schema.
+
+### Mobile client
 
 ```bash
-export SETU_ADMIN_MOBILE=9999999999
-export SETU_ADMIN_PASSWORD='use-a-long-unique-password'
-mvn spring-boot:run
+cd mobile
+npm ci
+cp .env.example .env
+# Set EXPO_PUBLIC_API_URL in .env to the backend origin reachable by the device.
+npm start
 ```
 
-Open http://localhost:8080. The administrator is created only if the supplied mobile is not already present; the password must be at least 16 characters. Customers can register from the website. Local data is stored under `data/` in an H2 file database. Treat the example number as a placeholder and avoid using real customer data in development. Delete local data only when it is safe to lose it.
+A physical phone cannot use `localhost` to reach a server running on your computer. Use an HTTPS backend for device and production testing. See [mobile/README.md](mobile/README.md) for platform tooling and current mobile gaps. No signed Android/iOS release binaries are included.
 
-To run tests: `mvn verify`. To check the mobile client: `cd mobile && npm ci && npm run check`. For PostgreSQL, copy `.env.example` to `.env`, set the values, then run `docker compose up --build`; the compose configuration binds the app to localhost. Do not commit `.env`, credentials or database files. The `prod` profile uses Flyway migrations and validates the schema on startup.
+### PostgreSQL with Docker Compose
 
-## SMS code sign-in
+Copy the root `.env.example` to `.env` and set the database password and administrator credentials. Run:
 
-The optional SMS adapter requires `SETU_OTP_WEBHOOK_URL` (HTTPS) and `SETU_OTP_WEBHOOK_TOKEN`. The owner must configure an SMS integration that accepts an authenticated JSON POST with `phone`, `message` and `purpose`; an HTTP 2xx indicates only that the provider accepted the request. No SMS provider is configured by default. For local development only, `SETU_OTP_DEV=true` returns the code in the response. Development codes are forcibly disabled with the `prod` profile. Password sign-in remains available.
+```bash
+docker compose up --build
+```
 
-## Important limits
+The configuration uses the `prod` Spring profile, PostgreSQL and Flyway migrations, with the application bound to `127.0.0.1:8080`. Database and upload data are stored in Docker volumes. Never commit `.env`, credentials or database files. The PostgreSQL migration and deployment still require validation before production use.
 
-- This implementation has not completed all BRD acceptance criteria. Provider-specific SMS, payment gateway/webhooks, maps, push notifications, online payments and actual provider payouts are not configured. Payment/refund workflows record manually verified offline events; they do not move money.
-- Mobile app source is included; signed Android/iOS builds, device testing and app-store submission remain outstanding. The mobile client does not yet cover every web administration screen.
-- Security needs an independent review, durable multi-instance rate limiting, secure public hosting/TLS, monitored backups and a business-approved privacy/retention policy before real users or personal data are onboarded. Uploads are stored locally; object storage, malware scanning, limits and recovery procedures need production design. Do not expose the local development configuration publicly.
-- Provider criteria, pilot locations, language, refund/cancellation rules, taxes, revenue model and final commercial terms require owner decisions. No wallet, escrow, split settlement or automatic payouts are implemented.
-- Initial data in a pre-existing prototype H2 database is not automatically migrated to the new schema; retain a backup and plan migration before upgrading any environment with data.
+## Authentication and integrations
 
-See [docs/BRD-COVERAGE.md](docs/BRD-COVERAGE.md) for the requirement-by-requirement status and remaining work.
+Password-based sign-in is available. SMS-code sign-in is optional: `SETU_OTP_WEBHOOK_URL` must be an HTTPS endpoint and `SETU_OTP_WEBHOOK_TOKEN` must contain its bearer token. The adapter sends a JSON POST containing `phone`, `message` and `purpose`; a 2xx response indicates that the request was accepted by the integration, not that a message was delivered. No SMS provider is configured by default.
 
-For decisions, accounts and release tasks that need the project owner, see [docs/OWNER-TO-DO.md](docs/OWNER-TO-DO.md).
+For local testing only, `SETU_OTP_DEV=true` returns a development code in the API response. This is disabled when the `prod` profile is active. Do not enable development-code handling in a public environment.
+
+Online payment gateways, maps, push notifications and third-party messaging are not configured. Payment and refund records represent manually verified offline events; they do not collect, transfer or refund funds. Provider selection, credentials and commercial policies must be agreed before implementing or enabling these integrations.
+
+## API overview
+
+The backend serves public catalogue endpoints under `/api/catalog/`, authentication endpoints under `/api/auth/`, and authenticated marketplace operations under `/api/records/`. Other endpoints provide private uploads, dashboard data, audit history and reports. Authenticated requests use a bearer token. The API implementation and authorization checks are in `Api.java`, `Security.java` and `Platform.java`; treat those files and their tests as the source of truth for supported actions.
+
+## Checks
+
+```bash
+mvn verify
+node --check src/main/resources/static/app.js
+cd mobile && npm ci && npm run check
+```
+
+These commands run the Java build and tests, check web JavaScript syntax and type-check the mobile client. See [`.github/workflows/ci.yml`](.github/workflows/ci.yml) for CI. A prior Java 21 run passed seven integration tests; subsequent changes still need a fresh full run, PostgreSQL migration validation and browser/device testing.
+
+## Before launch
+
+Authentication, access control, partner verification, quotations, bookings, delivery, offline financial records, support and reporting have implementation foundations, but the BRD is not fully accepted. Security review, multi-instance rate limiting, secure hosting/TLS, monitored backups, upload scanning and storage, privacy/retention policies, mobile device testing, release signing and production deployment remain necessary. Do not onboard real customers on the local development configuration.
+
+The owner still needs to confirm pilot scope and locations, verification criteria, languages, delivery model, payment and refund rules, tax/invoicing, revenue model, support arrangements and the required external accounts. No commission, escrow, split settlement or automatic payout is assumed.
+
+- [BRD coverage and remaining engineering work](docs/BRD-COVERAGE.md)
+- [Owner decisions, accounts and launch checklist](docs/OWNER-TO-DO.md)
+- [Development and business workflow for coding agents](AGENTS.md)
